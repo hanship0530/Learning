@@ -1,0 +1,7 @@
+apiVersion: projectcalico.org/v3
+kind: BGPPeer
+metadata:
+  name: bgppeer-rtr
+spec:
+  peerIP: 192.168.10.200
+  asNumber: 64512
