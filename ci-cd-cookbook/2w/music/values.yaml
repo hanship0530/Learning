@@ -1,0 +1,15 @@
+image:
+  repository: quay.io/rhdevelopers/playlist
+  tag: latest
+  pullPolicy: Always
+  containerPort: 8080
+
+replicaCount: 1
+
+postgresql:
+  server: jdbc:postgresql://music-db-postgresql:5432/mydb
+  postgresqlUsername: my-default
+  postgresqlPassword: postgres
+  postgresqlDatabase: mydb  
+  secretName: music-db-postgresql
+  secretKey: postgresql-password

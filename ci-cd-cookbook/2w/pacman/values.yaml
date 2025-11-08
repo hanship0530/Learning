@@ -1,0 +1,8 @@
+image:     # image 절 정의
+  repository: quay.io/gitops-cookbook/pacman-kikd
+  tag: "1.1.0"
+  pullPolicy: Always
+  containerPort: 8080
+
+replicaCount: 1
+securityContext: {}     # securityContext 속성의 값을 비운다

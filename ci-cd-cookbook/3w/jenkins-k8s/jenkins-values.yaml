@@ -1,0 +1,46 @@
+controller:
+  serviceType: NodePort
+  servicePort: 80
+  nodePort: 30000
+  jenkinsUriPrefix: "/jenkins"
+  serviceAccount:
+    create: false
+    name: jenkins
+  installPlugins:
+    # Kubernetes
+    - kubernetes:latest
+    - kubernetes-cli:latest
+
+    # GitHub
+    - github:latest
+    - github-branch-source:latest
+    - github-api:latest
+    - pipeline-github-lib:latest
+
+    # Pipeline
+    - workflow-aggregator:latest
+    - pipeline-stage-view:latest
+
+    # Git
+    - git:latest
+    - git-client:latest
+
+    # Credentials
+    - credentials:latest
+    - credentials-binding:latest
+
+    # 기타 유틸
+    - configuration-as-code:latest
+    - timestamper:latest
+    - ansicolor:latest
+    - junit:latest
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "2Gi"
+    limits:
+      cpu: "2000m"
+      memory: "4Gi"
+  persistence:
+    enabled: true
+    size: 50Gi

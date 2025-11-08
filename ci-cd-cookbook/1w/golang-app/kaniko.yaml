@@ -1,0 +1,18 @@
+apiVersion: shipwright.io/v1alpha1
+kind: Build
+metadata:
+  name: kaniko-golang-build
+  annotations:
+    build.shipwright.io/build-run-deletion: "true"   # 빌드 완료 후 BuildRun 삭제
+spec:
+  source:
+    url: https://github.com/shipwright-io/sample-go  # 소스 코드를 가져올 저장소
+    contextDir: docker-build                         # 소스 코드가 있는 디렉터리
+  strategy:
+    name: kaniko                                     # 빌드에 사용할 ClusterBuildStrategy 이름
+    kind: ClusterBuildStrategy
+  dockerfile: Dockerfile
+  output:
+    image: docker.io/$REGISTRY_USER/sample-golang:latest # 결과 이미지를 저장할 장소
+    credentials:
+      name: push-secret # 레지스트리에 인증하고 이미지를 푸시하는 데 사용할 시크릿 이름  

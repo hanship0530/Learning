@@ -1,0 +1,10 @@
+image:
+  repository: quay.io/rhdevelopers/blue-green-canary
+  tag: latest
+  pullPolicy: Always
+  containerPort: 8080
+
+replicaCount: 1
+
+configmap:
+  name: greeting-config

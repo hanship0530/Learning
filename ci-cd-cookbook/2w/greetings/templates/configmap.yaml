@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: greeting-config
+data:
+  greeting: Alohas
+  BLUE_GREEN_CANARY_COLOR: "#6bbded"
+  BLUE_GREEN_CANARY_MESSAGE: "Hello53ss"
