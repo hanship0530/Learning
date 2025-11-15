@@ -1,0 +1,86 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: rollouts-demo-bg-analysis
+spec:
+  args:
+    # Prometheus 주소를 환경에 맞게 수정하세요
+    - name: prometheus-address
+      value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+    # 앱 이름
+    - name: app-name
+      value: rollouts-demo-bg
+    # Active Ingress 호스트명
+    - name: ingress-host-active
+      value: rollouts-demo-bg-active.example.com
+    # Preview Ingress 호스트명
+    - name: ingress-host-preview
+      value: rollouts-demo-bg-preview.example.com
+  metrics:
+    # Ingress HTTP 200 응답 비율 확인 - 80% 이상이어야 함
+    # 20% 단계 분석용 메트릭 (Preview 서비스 분석)
+    - name: ingress-http200-ratio-20
+      interval: 30s
+      count: 6  # 6번 확인 (30초 * 6 = 3분)
+      successCondition: result[0] >= 0.80  # HTTP 200 응답 비율이 80% 이상
+      failureLimit: 2  # 2번 실패하면 롤백
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            # Preview Ingress를 통한 HTTP 200 응답 비율 (3분 윈도우)
+            (
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host-preview}}",
+                status="200"
+              }[3m]))
+              /
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host-preview}}"
+              }[3m]))
+            ) or vector(0)
+    
+    # 60% 단계 분석용 메트릭 (Preview 서비스 분석)
+    - name: ingress-http200-ratio-60
+      interval: 30s
+      count: 6  # 6번 확인 (30초 * 6 = 3분)
+      successCondition: result[0] >= 0.80  # HTTP 200 응답 비율이 80% 이상
+      failureLimit: 2  # 2번 실패하면 롤백
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            # Preview Ingress를 통한 HTTP 200 응답 비율 (3분 윈도우)
+            (
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host-preview}}",
+                status="200"
+              }[3m]))
+              /
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host-preview}}"
+              }[3m]))
+            ) or vector(0)
+    
+    # 100% 단계 분석용 메트릭 (Preview 서비스 분석)
+    - name: ingress-http200-ratio-100
+      interval: 30s
+      count: 6  # 6번 확인 (30초 * 6 = 3분)
+      successCondition: result[0] >= 0.80  # HTTP 200 응답 비율이 80% 이상
+      failureLimit: 2  # 2번 실패하면 롤백
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            # Preview Ingress를 통한 HTTP 200 응답 비율 (3분 윈도우)
+            (
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host-preview}}",
+                status="200"
+              }[3m]))
+              /
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host-preview}}"
+              }[3m]))
+            ) or vector(0)
+

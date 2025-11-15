@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: canary-test
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: dev
+  source:
+    repoURL: https://github.com/hanship0530/argo-rollout.git
+    targetRevision: main
+    path: rollouts/canary-test
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  ignoreDifferences:
+    # kubectl patch로 변경한 image를 ArgoCD가 되돌리지 않도록 설정
+    - group: argoproj.io
+      kind: Rollout
+      name: rollouts-demo
+      namespace: default
+      jsonPointers:
+        - /spec/template/spec/containers/0/image
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - RespectIgnoreDifferences=true

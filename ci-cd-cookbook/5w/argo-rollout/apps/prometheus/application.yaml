@@ -1,0 +1,152 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: infra
+  sources:
+    # Helm chart 소스
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: "61.0.0"
+      helm:
+        releaseName: prometheus
+        includeCRDs: true
+        values: |
+          # Prometheus 설정
+          prometheus:
+            prometheusSpec:
+              retention: 30d
+              storageSpec:
+                volumeClaimTemplate:
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 50Gi
+              serviceMonitorSelectorNilUsesHelmValues: false
+              podMonitorSelectorNilUsesHelmValues: false
+              ruleSelectorNilUsesHelmValues: false
+              # 모든 ServiceMonitor를 선택하도록 명시적으로 설정 (빈 selector = 모든 것 선택)
+              serviceMonitorSelector: {}
+              podMonitorSelector: {}
+              # 모든 네임스페이스의 ServiceMonitor를 찾을 수 있도록 설정 (빈 selector = 모든 네임스페이스)
+              serviceMonitorNamespaceSelector: {}
+              podMonitorNamespaceSelector: {}
+              # Service 생성 (Argo Rollouts에서 접근 가능하도록)
+              service:
+                type: ClusterIP
+                port: 9090
+              serviceAccount:
+                create: true
+              # 리소스 제한 (kind 환경에 맞게 조정)
+              resources:
+                requests:
+                  memory: 512Mi
+                  cpu: 200m
+                limits:
+                  memory: 1Gi
+                  cpu: 500m
+            # Ingress 설정 (별도로 관리하므로 비활성화)
+            ingress:
+              enabled: false
+          
+          # Grafana 설정 (선택사항)
+          grafana:
+            enabled: true
+            adminPassword: admin  # 프로덕션에서는 Secret 사용 권장
+            service:
+              type: ClusterIP
+              port: 80
+            resources:
+              requests:
+                memory: 128Mi
+                cpu: 100m
+              limits:
+                memory: 256Mi
+                cpu: 200m
+          
+          # Alertmanager 설정
+          alertmanager:
+            enabled: true
+            alertmanagerSpec:
+              storage:
+                volumeClaimTemplate:
+                  spec:
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: 2Gi  # kind 환경에 맞게 조정
+              resources:
+                requests:
+                  memory: 128Mi
+                  cpu: 100m
+                limits:
+                  memory: 256Mi
+                  cpu: 200m
+          
+          # Node Exporter
+          nodeExporter:
+            enabled: true
+          
+          # Kube State Metrics
+          kubeStateMetrics:
+            enabled: true
+          
+          # Prometheus Operator
+          prometheusOperator:
+            enabled: true
+            resources:
+              requests:
+                memory: 128Mi
+                cpu: 100m
+              limits:
+                memory: 256Mi
+                cpu: 200m
+          
+          # 기본 ServiceMonitor 생성
+          defaultRules:
+            create: true
+          
+          # 네임스페이스 설정
+          namespaceOverride: monitoring
+    # Certificate 및 Ingress 소스 (kustomization)
+    - repoURL: https://github.com/hanship0530/argo-rollout.git
+      targetRevision: main
+      path: bootstrap/prometheus
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  ignoreDifferences:
+    # CRD annotation 크기 제한 문제로 인해 CRD를 ArgoCD 관리에서 완전히 제외
+    # CRD는 Helm chart가 설치하되, ArgoCD는 동기화하지 않음
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: alertmanagers.monitoring.coreos.com
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: prometheuses.monitoring.coreos.com
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: prometheusagents.monitoring.coreos.com
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: thanosrulers.monitoring.coreos.com
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true  # CRD annotation 크기 제한 문제 해결
+      - RespectIgnoreDifferences=true  # ignoreDifferences 설정 존중
+    retry:
+      limit: 1
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
