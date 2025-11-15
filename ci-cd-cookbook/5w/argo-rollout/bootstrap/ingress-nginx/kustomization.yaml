@@ -1,0 +1,90 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: ingress-nginx
+
+resources:
+- https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+- servicemonitor.yaml
+
+patches:
+- target:
+    kind: Deployment
+    name: ingress-nginx-controller
+  patch: |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+    spec:
+      template:
+        metadata:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "10254"
+        spec:
+          nodeSelector:
+            kubernetes.io/os: linux
+            ingress-ready: "true"
+          containers:
+          - name: controller
+            ports:
+            - containerPort: 10254
+              name: metrics
+              protocol: TCP
+- target:
+    kind: Service
+    name: ingress-nginx-controller
+  patch: |-
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+      labels:
+        app.kubernetes.io/name: ingress-nginx
+        app.kubernetes.io/component: controller
+    spec:
+      ports:
+      - name: metrics
+        port: 10254
+        protocol: TCP
+        targetPort: metrics
+- target:
+    kind: ConfigMap
+    name: ingress-nginx-controller
+  patch: |-
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+    data:
+      enable-ssl-passthrough: "true"
+      # kind 환경에서 localhost를 address로 설정
+      publish-status-address: "localhost"
+      # 메트릭 활성화 (기본값이지만 명시적으로 설정)
+      enable-metrics: "true"
+      # 호스트별 메트릭 수집 활성화 (host 레이블을 위해 필요)
+      metrics-per-host: "true"
+
+patchesJson6902:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: ingress-nginx-controller
+    namespace: ingress-nginx
+  path: metrics-args-patch.json
+# - target:
+#     kind: ValidatingWebhookConfiguration
+#     name: ingress-nginx-admission
+#   patch: |-
+#     apiVersion: admissionregistration.k8s.io/v1
+#     kind: ValidatingWebhookConfiguration
+#     metadata:
+#       name: ingress-nginx-admission
+#     webhooks:
+#       - name: validate.nginx.ingress.kubernetes.io
+#         failurePolicy: Ignore

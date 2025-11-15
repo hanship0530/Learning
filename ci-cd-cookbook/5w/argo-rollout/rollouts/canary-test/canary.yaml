@@ -1,0 +1,94 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: rollouts-demo
+spec:
+  replicas: 5
+  strategy:
+    canary:
+      # Analysis를 사용하여 트래픽 기반 자동 배포
+      # 각 단계에서 메트릭을 확인하고 조건을 만족하면 자동으로 다음 단계로 진행
+      analysis:
+        templates:
+        - templateName: rollouts-demo-analysis
+        args:
+        - name: prometheus-address
+          value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090  # 환경에 맞게 수정
+        - name: app-name
+          value: rollouts-demo
+        - name: ingress-host
+          value: rollouts-demo.example.com  # Ingress 호스트명 수정
+        - name: ingress-service
+          value: rollouts-demo  # Ingress 서비스 이름
+        startingStep: 2  # 2단계부터 analysis 시작
+        successfulRunHistoryLimit: 3
+        unsuccessfulRunHistoryLimit: 3
+      steps:
+      - setWeight: 20
+      - pause:
+          duration: 30s  # 30초 대기 후 자동 진행 (또는 analysis 완료 시 자동 진행)
+      - setWeight: 40
+      - pause:
+          duration: 10s  # 최소 대기 시간
+      - analysis:
+          templates:
+          - templateName: rollouts-demo-analysis
+          args:
+          - name: prometheus-address
+            value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+          - name: app-name
+            value: rollouts-demo
+          - name: ingress-host
+            value: rollouts-demo.example.com
+          - name: ingress-service
+            value: rollouts-demo
+      - setWeight: 60
+      - pause:
+          duration: 10s
+      - analysis:
+          templates:
+          - templateName: rollouts-demo-analysis
+          args:
+          - name: prometheus-address
+            value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+          - name: app-name
+            value: rollouts-demo
+          - name: ingress-host
+            value: rollouts-demo.example.com
+          - name: ingress-service
+            value: rollouts-demo
+      - setWeight: 80
+      - pause:
+          duration: 10s
+      - analysis:
+          templates:
+          - templateName: rollouts-demo-analysis
+          args:
+          - name: prometheus-address
+            value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+          - name: app-name
+            value: rollouts-demo
+          - name: ingress-host
+            value: rollouts-demo.example.com
+          - name: ingress-service
+            value: rollouts-demo
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: rollouts-demo
+  template:
+    metadata:
+      labels:
+        app: rollouts-demo
+    spec:
+      containers:
+      - name: rollouts-demo
+        image: argoproj/rollouts-demo:blue
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        resources:
+          requests:
+            memory: 32Mi
+            cpu: 5m

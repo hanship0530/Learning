@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: rollouts-demo-bg
+spec:
+  replicas: 1
+  strategy:
+    blueGreen:
+      # Active 서비스는 현재 프로덕션 트래픽을 받는 서비스
+      activeService: rollouts-demo-bg-active
+      # Preview 서비스는 새 버전(green)의 트래픽을 받는 서비스
+      previewService: rollouts-demo-bg-preview
+      # Auto Promotion: 분석이 성공하면 자동으로 green을 active로 전환
+      autoPromotionEnabled: false
+      # Promotion Policy: 분석이 성공하면 자동으로 전환
+      scaleDownDelaySeconds: 30  # 전환 후 30초 후에 이전 버전(blue) 제거
+      # Analysis를 사용하여 트래픽 기반 자동 배포
+      # HTTP 200 응답이 80% 이상일 때 자동으로 green을 active로 전환
+      # 20%, 60%, 100% 세 단계로 분석 수행
+      prePromotionAnalysis:
+        templates:
+        - templateName: rollouts-demo-bg-analysis
+        args:
+        - name: prometheus-address
+          value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+        - name: app-name
+          value: rollouts-demo-bg
+        - name: ingress-host-active
+          value: rollouts-demo-bg-active.example.com
+        - name: ingress-host-preview
+          value: rollouts-demo-bg-preview.example.com
+        successfulRunHistoryLimit: 3
+        unsuccessfulRunHistoryLimit: 3
+      # Post Promotion Analysis: 전환 후에도 모니터링 (Active 서비스 분석)
+      postPromotionAnalysis:
+        templates:
+        - templateName: rollouts-demo-bg-analysis
+        args:
+        - name: prometheus-address
+          value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+        - name: app-name
+          value: rollouts-demo-bg
+        - name: ingress-host-active
+          value: rollouts-demo-bg-active.example.com
+        - name: ingress-host-preview
+          value: rollouts-demo-bg-preview.example.com
+        successfulRunHistoryLimit: 3
+        unsuccessfulRunHistoryLimit: 3
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: rollouts-demo-bg
+  template:
+    metadata:
+      labels:
+        app: rollouts-demo-bg
+    spec:
+      containers:
+      - name: rollouts-demo-bg
+        image: argoproj/rollouts-demo:blue
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        resources:
+          requests:
+            memory: 32Mi
+            cpu: 5m
+

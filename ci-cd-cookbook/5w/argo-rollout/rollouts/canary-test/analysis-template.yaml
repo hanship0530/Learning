@@ -1,0 +1,80 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: rollouts-demo-analysis
+spec:
+  args:
+    # Prometheus 주소를 환경에 맞게 수정하세요
+    # 예: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+    - name: prometheus-address
+      value: http://prometheus-kube-prometheus-prometheus.monitoring.svc:9090
+    # 앱 이름 (기본값: rollouts-demo)
+    - name: app-name
+      value: rollouts-demo
+    # Ingress 호스트명 (환경에 맞게 수정)
+    - name: ingress-host
+      value: rollouts-demo.example.com
+    # Ingress 서비스 이름
+    - name: ingress-service
+      value: rollouts-demo
+  metrics:
+    # Ingress HTTP 200 응답 지속성 확인 - 3분 동안 지속적으로 HTTP 200 응답이 있어야 함
+    # 이 메트릭은 3분 동안 매 30초마다 확인하여 HTTP 200 응답 비율이 80% 이상인지 확인합니다
+    - name: ingress-http200-duration
+      interval: 30s
+      count: 6  # 6번 확인 (30초 * 6 = 3분)
+      successCondition: result[0] >= 0.80  # HTTP 200 응답 비율이 80% 이상
+      failureLimit: 2  # 2번 실패하면 롤백
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            # Ingress를 통한 HTTP 200 응답 비율 (3분 윈도우)
+            # rollouts-demo만 필터링 (host로 필터링)
+            (
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host}}",
+                status="200"
+              }[3m]))
+              /
+              sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+                host="{{args.ingress-host}}"
+              }[3m]))
+            ) or vector(0)
+    
+    # Ingress HTTP 200 응답 수 확인 - 최소 요청 수 확인 (트래픽이 있는지 확인)
+    - name: ingress-http200-count
+      interval: 30s
+      count: 6  # 3분 동안 확인
+      successCondition: result[0] >= 0.1  # 초당 0.1 개 이상의 요청이 있어야 함
+      failureLimit: 6  # 모든 체크에서 실패해야 롤백 (더 관대하게)
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            # 3분 동안의 HTTP 200 응답 수 (rollouts-demo만)
+            sum(rate(nginx_ingress_controller_response_duration_seconds_count{
+              host="{{args.ingress-host}}",
+              status="200"
+            }[3m])) * 180
+    
+    # Ingress 레이턴시 메트릭 (P95) - Ingress를 통한 응답 시간 모니터링
+    - name: ingress-latency-p95
+      interval: 30s
+      count: 6  # 3분 동안 확인
+      successCondition: result[0] <= 1000  # P95 레이턴시가 1000ms 이하
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: "{{args.prometheus-address}}"
+          query: |
+            # Ingress를 통한 P95 레이턴시 (밀리초) - rollouts-demo만
+            # 메트릭이 없을 경우 NaN 방지
+            (
+              histogram_quantile(0.95,
+                sum(rate(nginx_ingress_controller_response_duration_seconds_bucket{
+                  host="{{args.ingress-host}}"
+                }[3m])) by (le)
+              ) * 1000
+            ) or vector(0)
+

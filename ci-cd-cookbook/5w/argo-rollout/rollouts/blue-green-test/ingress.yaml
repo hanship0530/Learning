@@ -1,0 +1,59 @@
+# Active 서비스용 Ingress (프로덕션 트래픽)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rollouts-demo-bg-active-ingress
+  namespace: default
+  annotations:
+    # SSL 리다이렉트 (HTTP도 허용하도록 false로 설정, 또는 HTTPS만 사용하려면 true)
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # 메트릭 수집을 위한 annotation (Prometheus가 메트릭을 수집할 수 있도록)
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - rollouts-demo-bg-active.example.com
+    secretName: rollouts-demo-bg-active-tls
+  rules:
+  - host: rollouts-demo-bg-active.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rollouts-demo-bg-active  # Active 서비스로 트래픽 라우팅
+            port:
+              number: 80
+---
+# Preview 서비스용 Ingress (테스트 트래픽)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rollouts-demo-bg-preview-ingress
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # 메트릭 수집을 위한 annotation (Prometheus가 메트릭을 수집할 수 있도록)
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - rollouts-demo-bg-preview.example.com
+    secretName: rollouts-demo-bg-preview-tls
+  rules:
+  - host: rollouts-demo-bg-preview.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: rollouts-demo-bg-preview  # Preview 서비스로 트래픽 라우팅
+            port:
+              number: 80
+

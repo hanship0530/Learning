@@ -1,0 +1,13 @@
+[
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/args/-",
+    "value": "--enable-metrics=true"
+  },
+  {
+    "op": "add",
+    "path": "/spec/template/spec/containers/0/args/-",
+    "value": "--metrics-per-host=true"
+  }
+]
+
