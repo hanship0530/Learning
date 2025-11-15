@@ -12,4 +12,18 @@ spec:
   - rollouts-demo-bg-active.example.com
   duration: 8760h # 1 year
   renewBefore: 720h # 30 days
-
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rollouts-demo-bg-preview-tls
+  namespace: default
+spec:
+  secretName: rollouts-demo-bg-preview-tls
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+  dnsNames:
+  - rollouts-demo-bg-preview.example.com
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days

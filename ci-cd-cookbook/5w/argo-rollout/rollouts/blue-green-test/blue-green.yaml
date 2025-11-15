@@ -3,7 +3,7 @@ kind: Rollout
 metadata:
   name: rollouts-demo-bg
 spec:
-  replicas: 1
+  replicas: 3
   strategy:
     blueGreen:
       # Active 서비스는 현재 프로덕션 트래픽을 받는 서비스
@@ -11,7 +11,7 @@ spec:
       # Preview 서비스는 새 버전(green)의 트래픽을 받는 서비스
       previewService: rollouts-demo-bg-preview
       # Auto Promotion: 분석이 성공하면 자동으로 green을 active로 전환
-      autoPromotionEnabled: false
+      autoPromotionEnabled: true
       # Promotion Policy: 분석이 성공하면 자동으로 전환
       scaleDownDelaySeconds: 30  # 전환 후 30초 후에 이전 버전(blue) 제거
       # Analysis를 사용하여 트래픽 기반 자동 배포

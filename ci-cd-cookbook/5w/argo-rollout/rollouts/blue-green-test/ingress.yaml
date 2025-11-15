@@ -56,4 +56,3 @@ spec:
             name: rollouts-demo-bg-preview  # Preview 서비스로 트래픽 라우팅
             port:
               number: 80
-
