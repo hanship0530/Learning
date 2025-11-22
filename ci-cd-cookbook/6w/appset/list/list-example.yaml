@@ -18,9 +18,9 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/gasida/cicd-study.git
+        repoURL: https://github.com/hanship0530/Learning.git
         targetRevision: HEAD
-        path: appset/list/guestbook/{{.cluster}}
+        path: ci-cd-cookbook/6w/appset/list/guestbook/{{.cluster}}
       destination:
         server: '{{.url}}'
         namespace: guestbook
