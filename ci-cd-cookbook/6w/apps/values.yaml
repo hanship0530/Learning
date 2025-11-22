@@ -7,9 +7,9 @@ config:
       targetRevision: main
 
 applications:
-  - name: helm-guestbook
+  - name: ci-cd-cookbook/6w/helm-guestbook
     tool:
       helm:
         releaseName: helm-guestbook
-  - name: kustomize-guestbook
-  - name: sync-waves
+  - name: ci-cd-cookbook/6w/kustomize-guestbook
+  - name: ci-cd-cookbook/6w/sync-waves
